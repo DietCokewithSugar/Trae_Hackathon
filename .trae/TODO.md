@@ -1,8 +1,8 @@
 # TODO:
 
-- [x] init-git: 初始化Git仓库 (priority: High)
-- [x] check-gitignore: 检查.gitignore文件确保排除敏感文件 (priority: High)
-- [ ] add-files: 添加所有项目文件到Git (**IN PROGRESS**) (priority: High)
-- [ ] initial-commit: 创建初始提交 (priority: High)
-- [ ] setup-remote: 指导用户创建GitHub仓库并设置远程地址 (priority: Medium)
-- [ ] push-code: 推送代码到GitHub (priority: Medium)
+- [x] create-unfamiliar-table: 创建unfamiliar表用于存储不熟悉的单词 (priority: High)
+- [x] implement-save-api: 实现保存单词到unfamiliar表的API函数 (priority: High)
+- [x] add-unfamiliar-button: 在WordPopup组件中添加"不熟悉"按钮 (priority: High)
+- [x] implement-get-unfamiliar-api: 创建获取所有不熟悉单词的API函数 (priority: Medium)
+- [x] add-unfamiliar-list-home: 在主页添加不熟悉单词列表显示区域 (priority: Medium)
+- [x] test-unfamiliar-feature: 测试不熟悉单词功能并确保避免重复添加 (priority: Low)

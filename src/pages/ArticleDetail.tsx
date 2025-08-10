@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Article, articleAPI } from '../lib/supabase'
+import { Article, articleAPI, Word, wordAPI } from '../lib/supabase'
 import { ArrowLeft, Calendar, Type, Loader2 } from 'lucide-react'
+import WordPopup from '../components/WordPopup'
 
 interface ArticleDetailProps {
   articleId: string
@@ -12,6 +13,10 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const [loading, setLoading] = useState(true)
   const [fontSize, setFontSize] = useState(16)
   const [hoveredWord, setHoveredWord] = useState<string | null>(null)
+  const [selectedWord, setSelectedWord] = useState<Word | null>(null)
+  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
+  const [isPopupVisible, setIsPopupVisible] = useState(false)
+  const [loadingWord, setLoadingWord] = useState(false)
 
   useEffect(() => {
     loadArticle()
@@ -43,7 +48,64 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     setFontSize(prev => Math.max(12, Math.min(24, prev + delta)))
   }
 
-  // 将文本按单词分割并渲染为可悬停的元素
+  // 处理单词点击事件
+  const handleWordClick = async (word: string, event: React.MouseEvent) => {
+    event.preventDefault()
+    
+    // 调试日志：打印原始点击的单词
+    console.log('=== 单词点击调试信息 ===')
+    console.log('1. 原始点击的单词:', word)
+    console.log('2. 单词类型:', typeof word)
+    console.log('3. 单词长度:', word.length)
+    
+    // 清理单词，移除标点符号
+    const cleanWord = word.replace(/[^a-zA-Z]/g, '').toLowerCase()
+    console.log('4. 清理后的单词:', cleanWord)
+    console.log('5. 清理后单词长度:', cleanWord.length)
+    
+    if (!cleanWord) {
+      console.log('6. 清理后单词为空，退出处理')
+      return
+    }
+
+    setLoadingWord(true)
+    console.log('7. 开始查询单词:', cleanWord)
+    
+    try {
+      const wordData = await wordAPI.getWordByText(cleanWord)
+      console.log('8. 查询结果:', wordData)
+      
+      if (wordData) {
+        console.log('9. 找到单词数据，显示弹窗')
+        setSelectedWord(wordData)
+        
+        // 设置弹窗位置
+        const rect = (event.target as HTMLElement).getBoundingClientRect()
+        setPopupPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top
+        })
+        
+        setIsPopupVisible(true)
+      } else {
+        console.log('10. 数据库中未找到该单词:', cleanWord)
+      }
+    } catch (error) {
+      console.error('11. 查询单词时发生错误:', error)
+    } finally {
+      setLoadingWord(false)
+      console.log('12. 单词查询处理完成')
+      console.log('========================')
+    }
+  }
+
+  // 关闭弹窗
+  const closePopup = () => {
+    setIsPopupVisible(false)
+    setSelectedWord(null)
+  }
+
+  // 将文本按单词分割并渲染为可悬停和点击的元素
   const renderTextWithWordHighlight = (text: string) => {
     // 使用正则表达式分割文本，保留标点符号和空格
     const tokens = text.split(/(\s+|[.,!?;:"'()\[\]{}])/)
@@ -60,11 +122,12 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
               hoveredWord === token.toLowerCase() 
                 ? 'bg-yellow-200 text-yellow-900 shadow-sm transform scale-105' 
                 : 'hover:bg-yellow-100'
-            }`}
+            } ${loadingWord ? 'pointer-events-none' : ''}`}
             onMouseEnter={() => setHoveredWord(token.toLowerCase())}
             onMouseLeave={() => setHoveredWord(null)}
             onTouchStart={() => setHoveredWord(token.toLowerCase())}
             onTouchEnd={() => setTimeout(() => setHoveredWord(null), 1000)}
+            onClick={(e) => handleWordClick(token, e)}
           >
             {token}
           </span>
@@ -187,6 +250,14 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
           </div>
         </article>
       </div>
+
+      {/* 单词查询弹窗 */}
+      <WordPopup
+        word={selectedWord}
+        position={popupPosition}
+        isVisible={isPopupVisible}
+        onClose={closePopup}
+      />
     </div>
   )
 }
