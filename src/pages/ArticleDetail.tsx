@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Article, articleAPI, Word, wordAPI } from '../lib/supabase'
-import { ArrowLeft, Calendar, Type, Loader2 } from 'lucide-react'
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, CheckCircle, Loader2 } from 'lucide-react'
 import WordPopup from '../components/WordPopup'
 
 interface ArticleDetailProps {
@@ -11,7 +11,8 @@ interface ArticleDetailProps {
 export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
-  const [fontSize, setFontSize] = useState(16)
+  const [sentences, setSentences] = useState<string[]>([])
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
   const [hoveredWord, setHoveredWord] = useState<string | null>(null)
   const [selectedWord, setSelectedWord] = useState<Word | null>(null)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
@@ -27,11 +28,58 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
       setLoading(true)
       const data = await articleAPI.getArticleById(articleId)
       setArticle(data)
+      
+      // 将文章内容按句子分割
+      if (data?.content) {
+        const sentenceArray = splitIntoSentences(data.content)
+        setSentences(sentenceArray)
+        setCurrentSentenceIndex(0)
+      }
     } catch (error) {
       console.error('Failed to load article:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  // 将文本分割为句子
+  const splitIntoSentences = (text: string): string[] => {
+    // 移除多余的空白字符并按段落分割
+    const paragraphs = text.split('\n').filter(p => p.trim())
+    const sentences: string[] = []
+    
+    paragraphs.forEach(paragraph => {
+      // 使用正则表达式按句子分割，保留句号、问号、感叹号作为句子结束标志
+      const sentenceMatches = paragraph.match(/[^.!?]+[.!?]+/g)
+      if (sentenceMatches) {
+        sentences.push(...sentenceMatches.map(s => s.trim()))
+      } else if (paragraph.trim()) {
+        // 如果没有标点符号，整个段落作为一个句子
+        sentences.push(paragraph.trim())
+      }
+    })
+    
+    return sentences.filter(s => s.length > 0)
+  }
+
+  // 导航到上一句
+  const goToPreviousSentence = () => {
+    if (currentSentenceIndex > 0) {
+      setCurrentSentenceIndex(currentSentenceIndex - 1)
+    }
+  }
+
+  // 导航到下一句
+  const goToNextSentence = () => {
+    if (currentSentenceIndex < sentences.length - 1) {
+      setCurrentSentenceIndex(currentSentenceIndex + 1)
+    }
+  }
+
+  // 完成阅读
+  const finishReading = () => {
+    // 可以在这里添加完成阅读的逻辑，比如记录阅读进度
+    onBack()
   }
 
   const formatDate = (dateString: string) => {
@@ -42,10 +90,6 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
-
-  const adjustFontSize = (delta: number) => {
-    setFontSize(prev => Math.max(12, Math.min(24, prev + delta)))
   }
 
   // 处理单词点击事件
@@ -192,89 +236,97 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     )
   }
 
+  const currentSentence = sentences[currentSentenceIndex] || ''
+  const isFirstSentence = currentSentenceIndex === 0
+  const isLastSentence = currentSentenceIndex === sentences.length - 1
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 返回按钮 */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            onClick={onBack}
-            className="flex items-center text-blue-600 hover:text-blue-700 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span>返回文章列表</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 阅读工具栏 */}
-      <div className="fixed right-6 top-1/2 transform -translate-y-1/2 bg-white rounded-lg shadow-lg p-3 z-10">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="flex items-center">
-            <Type className="w-4 h-4 text-slate-600 mr-2" />
-            <span className="text-sm text-slate-600">字体</span>
-          </div>
-          <button
-            onClick={() => adjustFontSize(2)}
-            className="w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-sm font-bold"
-          >
-            A+
-          </button>
-          <span className="text-xs text-slate-500">{fontSize}px</span>
-          <button
-            onClick={() => adjustFontSize(-2)}
-            className="w-8 h-8 bg-slate-600 text-white rounded-full hover:bg-slate-700 transition-colors text-sm font-bold"
-          >
-            A-
-          </button>
-        </div>
-      </div>
-
-      {/* 文章内容 */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <article className="bg-white rounded-lg shadow-sm p-8">
-          {/* 文章元信息 */}
-          <div className="flex items-center text-slate-500 text-sm mb-6">
-            <Calendar className="w-4 h-4 mr-2" />
-            <span>发布时间：{formatDate(article.created_at)}</span>
-          </div>
-
-          {/* 文章标题 */}
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-8 leading-tight">
-            {article.title}
-          </h1>
-
-          {/* 文章内容 */}
-          <div 
-            className="prose prose-lg max-w-none text-slate-700 leading-relaxed"
-            style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}
-          >
-            {article.content.split('\n').map((paragraph, index) => (
-              paragraph.trim() ? (
-                <p key={index} className="mb-6">
-                  {renderTextWithWordHighlight(paragraph)}
-                </p>
-              ) : (
-                <div key={index} className="mb-4" />
-              )
-            ))}
-          </div>
-
-          {/* 文章底部 */}
-          <div className="mt-12 pt-8 border-t border-slate-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500">
-                最后更新：{formatDate(article.updated_at)}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      {/* 顶部导航栏 */}
+      <div className="bg-white shadow-sm border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={onBack}
+              className="flex items-center text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span>返回文章列表</span>
+            </button>
+            
+            {/* 进度指示器 */}
+            <div className="flex items-center space-x-3">
+              <span className="text-sm text-slate-500">
+                {currentSentenceIndex + 1} / {sentences.length}
+              </span>
+              <div className="w-32 bg-slate-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentSentenceIndex + 1) / sentences.length) * 100}%` }}
+                />
               </div>
-              <button
-                onClick={onBack}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                返回文章列表
-              </button>
             </div>
           </div>
-        </article>
+        </div>
+      </div>
+
+      {/* 文章标题 */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 text-center">
+            {article.title}
+          </h1>
+        </div>
+      </div>
+
+      {/* 主要阅读区域 */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="max-w-4xl w-full">
+          {/* 当前句子显示区域 */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8">
+            <div className="text-center">
+              <p className="text-xl md:text-2xl leading-relaxed text-slate-800 font-medium">
+                {renderTextWithWordHighlight(currentSentence)}
+              </p>
+            </div>
+          </div>
+
+          {/* 导航按钮区域 */}
+          <div className="flex justify-center items-center space-x-6">
+            {/* 上一句按钮 */}
+            {!isFirstSentence && (
+              <button
+                onClick={goToPreviousSentence}
+                className="flex items-center px-6 py-3 bg-white text-slate-700 rounded-xl shadow-md hover:shadow-lg hover:bg-slate-50 transition-all duration-200 font-medium"
+              >
+                <ChevronLeft className="w-5 h-5 mr-2" />
+                上一句
+              </button>
+            )}
+
+            {/* 下一句按钮 */}
+            {!isLastSentence && (
+              <button
+                onClick={goToNextSentence}
+                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-200 font-medium"
+              >
+                下一句
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </button>
+            )}
+
+            {/* 完成阅读按钮 */}
+            {isLastSentence && (
+              <button
+                onClick={finishReading}
+                className="flex items-center px-8 py-3 bg-green-600 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-green-700 transition-all duration-200 font-medium"
+              >
+                <CheckCircle className="w-5 h-5 mr-2" />
+                完成阅读
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 单词查询弹窗 */}
