@@ -11,6 +11,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [fontSize, setFontSize] = useState(16)
+  const [hoveredWord, setHoveredWord] = useState<string | null>(null)
 
   useEffect(() => {
     loadArticle()
@@ -40,6 +41,39 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   const adjustFontSize = (delta: number) => {
     setFontSize(prev => Math.max(12, Math.min(24, prev + delta)))
+  }
+
+  // 将文本按单词分割并渲染为可悬停的元素
+  const renderTextWithWordHighlight = (text: string) => {
+    // 使用正则表达式分割文本，保留标点符号和空格
+    const tokens = text.split(/(\s+|[.,!?;:"'()\[\]{}])/)
+    
+    return tokens.map((token, index) => {
+      // 检查是否为单词（包含字母）
+      const isWord = /[a-zA-Z]/.test(token)
+      
+      if (isWord) {
+        return (
+          <span
+            key={index}
+            className={`inline-block cursor-pointer transition-all duration-200 rounded px-1 ${
+              hoveredWord === token.toLowerCase() 
+                ? 'bg-yellow-200 text-yellow-900 shadow-sm transform scale-105' 
+                : 'hover:bg-yellow-100'
+            }`}
+            onMouseEnter={() => setHoveredWord(token.toLowerCase())}
+            onMouseLeave={() => setHoveredWord(null)}
+            onTouchStart={() => setHoveredWord(token.toLowerCase())}
+            onTouchEnd={() => setTimeout(() => setHoveredWord(null), 1000)}
+          >
+            {token}
+          </span>
+        )
+      }
+      
+      // 返回非单词字符（空格、标点符号等）
+      return <span key={index}>{token}</span>
+    })
   }
 
   if (loading) {
@@ -129,7 +163,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             {article.content.split('\n').map((paragraph, index) => (
               paragraph.trim() ? (
                 <p key={index} className="mb-6">
-                  {paragraph}
+                  {renderTextWithWordHighlight(paragraph)}
                 </p>
               ) : (
                 <div key={index} className="mb-4" />
