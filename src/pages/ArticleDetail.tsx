@@ -27,6 +27,17 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const [readingStartTime, setReadingStartTime] = useState<Date | null>(null)
   const [readingEndTime, setReadingEndTime] = useState<Date | null>(null)
   const [newWordsAdded, setNewWordsAdded] = useState<string[]>([])
+  
+  // 句子阅读速度统计相关状态
+  const [sentenceTimings, setSentenceTimings] = useState<{
+    sentenceIndex: number
+    displayTime: Date
+    readTime?: Date
+    duration?: number
+    wordCount: number
+    readingSpeed?: number
+  }[]>([])
+  const [currentSentenceStartTime, setCurrentSentenceStartTime] = useState<Date | null>(null)
   const [showStatistics, setShowStatistics] = useState(false)
 
   useEffect(() => {
@@ -38,10 +49,50 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   // 添加键盘事件监听
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.code === 'Space') {
+      if (event.code === 'Space' && !isPopupVisible) {
         event.preventDefault()
         if (visibleSentenceCount < sentences.length) {
+          const now = new Date()
+          
+          // 记录当前句子的阅读完成时间
+          if (currentSentenceStartTime && visibleSentenceCount > 0) {
+            const currentSentenceIndex = visibleSentenceCount - 1
+            const duration = now.getTime() - currentSentenceStartTime.getTime()
+            const wordCount = countWords(sentences[currentSentenceIndex])
+            const readingSpeed = wordCount > 0 ? (wordCount / (duration / 1000 / 60)) : 0
+            
+            setSentenceTimings(prev => {
+              const updated = [...prev]
+              const existingIndex = updated.findIndex(t => t.sentenceIndex === currentSentenceIndex)
+              if (existingIndex >= 0) {
+                updated[existingIndex] = {
+                  ...updated[existingIndex],
+                  readTime: now,
+                  duration,
+                  readingSpeed
+                }
+              }
+              return updated
+            })
+          }
+          
+          // 显示下一句并记录开始时间
           setVisibleSentenceCount(prev => prev + 1)
+          setCurrentSentenceStartTime(now)
+          
+          // 记录新句子的显示时间
+          if (visibleSentenceCount < sentences.length) {
+            const nextSentenceIndex = visibleSentenceCount
+            const wordCount = countWords(sentences[nextSentenceIndex])
+            setSentenceTimings(prev => [
+              ...prev,
+              {
+                sentenceIndex: nextSentenceIndex,
+                displayTime: now,
+                wordCount
+              }
+            ])
+          }
         }
       }
     }
@@ -50,7 +101,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     return () => {
       window.removeEventListener('keydown', handleKeyPress)
     }
-  }, [visibleSentenceCount, sentences.length])
+  }, [visibleSentenceCount, sentences.length, isPopupVisible, currentSentenceStartTime, sentences])
 
   const loadArticle = async () => {
     try {
@@ -90,7 +141,19 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
         // 将文章内容按句子分割
         const sentenceArray = splitIntoSentences(contentToUse)
         setSentences(sentenceArray)
+        const now = new Date()
+        setCurrentSentenceStartTime(now)
         setVisibleSentenceCount(1)
+        
+        // 初始化第一句的时间记录
+        if (sentenceArray.length > 0) {
+          const wordCount = countWords(sentenceArray[0])
+          setSentenceTimings([{
+            sentenceIndex: 0,
+            displayTime: now,
+            wordCount
+          }])
+        }
       }
     } catch (error) {
       console.error('Failed to load article:', error)
@@ -123,8 +186,32 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   // 完成阅读
   const finishReading = () => {
+    const now = new Date()
+    
+    // 记录最后一句的阅读完成时间
+    if (currentSentenceStartTime && sentences.length > 0) {
+      const lastSentenceIndex = sentences.length - 1
+      const duration = now.getTime() - currentSentenceStartTime.getTime()
+      const wordCount = countWords(sentences[lastSentenceIndex])
+      const readingSpeed = wordCount > 0 ? (wordCount / (duration / 1000 / 60)) : 0
+      
+      setSentenceTimings(prev => {
+        const updated = [...prev]
+        const existingIndex = updated.findIndex(t => t.sentenceIndex === lastSentenceIndex)
+        if (existingIndex >= 0) {
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            readTime: now,
+            duration,
+            readingSpeed
+          }
+        }
+        return updated
+      })
+    }
+    
     // 记录阅读结束时间
-    setReadingEndTime(new Date())
+    setReadingEndTime(now)
     // 显示统计信息
     setShowStatistics(true)
   }
@@ -146,6 +233,51 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
       return `${diffMinutes}分${diffSeconds}秒`
     } else {
       return `${diffSeconds}秒`
+    }
+  }
+
+  // 计算句子中的单词数量
+  const countWords = (sentence: string) => {
+    // 移除HTML标签和特殊字符，只保留英文单词
+    const cleanText = sentence.replace(/<[^>]*>/g, '').replace(/[^a-zA-Z\s]/g, ' ')
+    const words = cleanText.trim().split(/\s+/).filter(word => word.length > 0)
+    return words.length
+  }
+
+  // 计算阅读速度统计
+  const calculateReadingSpeedStats = () => {
+    const completedTimings = sentenceTimings.filter(t => t.readingSpeed !== undefined)
+    if (completedTimings.length === 0) return null
+
+    // 按阅读速度排序
+    const sortedBySpeed = [...completedTimings].sort((a, b) => (a.readingSpeed || 0) - (b.readingSpeed || 0))
+    
+    // 计算分位数
+    const total = sortedBySpeed.length
+    const q1Index = Math.floor(total * 0.25)
+    const q2Index = Math.floor(total * 0.5)
+    const q3Index = Math.floor(total * 0.75)
+    
+    const q1Speed = sortedBySpeed[q1Index]?.readingSpeed || 0
+    const q2Speed = sortedBySpeed[q2Index]?.readingSpeed || 0
+    const q3Speed = sortedBySpeed[q3Index]?.readingSpeed || 0
+    
+    // 分级统计
+    const levels = {
+      slow: completedTimings.filter(t => (t.readingSpeed || 0) <= q1Speed),
+      medium: completedTimings.filter(t => (t.readingSpeed || 0) > q1Speed && (t.readingSpeed || 0) <= q2Speed),
+      fast: completedTimings.filter(t => (t.readingSpeed || 0) > q2Speed && (t.readingSpeed || 0) <= q3Speed),
+      veryFast: completedTimings.filter(t => (t.readingSpeed || 0) > q3Speed)
+    }
+    
+    // 计算平均速度
+    const avgSpeed = completedTimings.reduce((sum, t) => sum + (t.readingSpeed || 0), 0) / completedTimings.length
+    
+    return {
+      totalSentences: completedTimings.length,
+      averageSpeed: avgSpeed,
+      levels,
+      unfamiliarSentences: levels.slow // 最慢的25%作为不熟悉句子
     }
   }
 
@@ -314,9 +446,20 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   const visibleSentences = sentences.slice(0, visibleSentenceCount)
   const isAllSentencesVisible = visibleSentenceCount >= sentences.length
+  
+  // 获取慢速句子索引用于高亮显示
+  const getSlowSentenceIndices = () => {
+    const speedStats = calculateReadingSpeedStats()
+    if (!speedStats) return new Set()
+    return new Set(speedStats.unfamiliarSentences.map(s => s.sentenceIndex))
+  }
+  
+  const slowSentenceIndices = getSlowSentenceIndices()
 
   // 如果显示统计信息，渲染统计界面
   if (showStatistics && readingStartTime && readingEndTime) {
+    const speedStats = calculateReadingSpeedStats()
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
@@ -372,6 +515,59 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
                 )}
               </div>
             </div>
+
+            {/* 阅读速度分析 */}
+            {speedStats && (
+              <div className="flex items-start p-4 bg-gray-50 rounded-xl">
+                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4 mt-1">
+                  <Clock className="w-6 h-6 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800 mb-2">阅读速度分析</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">平均阅读速度</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {Math.round(speedStats.averageSpeed)} 词/分钟
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-600 mb-2">速度分布：</div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-red-600">● 较慢 (0-25%)</span>
+                          <span className="font-medium">{speedStats.levels.slow.length}句</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-orange-600">● 一般 (25-50%)</span>
+                          <span className="font-medium">{speedStats.levels.medium.length}句</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-600">● 较快 (50-75%)</span>
+                          <span className="font-medium">{speedStats.levels.fast.length}句</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-green-600">● 很快 (75-100%)</span>
+                          <span className="font-medium">{speedStats.levels.veryFast.length}句</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {speedStats.unfamiliarSentences.length > 0 && (
+                      <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                        <div className="text-sm font-medium text-red-800 mb-2">
+                          不熟悉的句子 ({speedStats.unfamiliarSentences.length}句)
+                        </div>
+                        <div className="text-xs text-red-600">
+                          这些句子的阅读速度较慢，建议重点复习
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 操作按钮 */}
@@ -386,10 +582,18 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             <button
               onClick={() => {
                 setShowStatistics(false)
-                setReadingStartTime(new Date())
+                const now = new Date()
+                setReadingStartTime(now)
                 setReadingEndTime(null)
                 setNewWordsAdded([])
                 setVisibleSentenceCount(1)
+                setCurrentSentenceStartTime(now)
+                // 重置句子时间统计
+                setSentenceTimings(sentences.length > 0 ? [{
+                  sentenceIndex: 0,
+                  displayTime: now,
+                  wordCount: countWords(sentences[0])
+                }] : [])
               }}
               className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition-colors font-medium"
             >
@@ -466,11 +670,21 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
           {/* 文章内容显示区域 */}
           <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8 border border-gray-200">
             <div className="space-y-6">
-              {visibleSentences.map((sentence, index) => (
-                <p key={index} className="text-xl md:text-2xl leading-relaxed text-gray-800 font-medium">
-                  {renderTextWithWordHighlight(sentence)}
-                </p>
-              ))}
+              {visibleSentences.map((sentence, index) => {
+                const isSlowSentence = slowSentenceIndices.has(index)
+                return (
+                  <p 
+                    key={index} 
+                    className={`text-xl md:text-2xl leading-relaxed font-medium transition-all duration-300 ${
+                      isSlowSentence 
+                        ? 'text-red-800 bg-red-50 p-4 rounded-lg border-l-4 border-red-300' 
+                        : 'text-gray-800'
+                    }`}
+                  >
+                    {renderTextWithWordHighlight(sentence)}
+                  </p>
+                )
+              })}
             </div>
           </div>
 

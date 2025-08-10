@@ -1,7 +1,7 @@
 # TODO:
 
-- [x] check-git-status: 检查当前Git仓库状态和未提交的修改 (priority: High)
-- [x] check-gitignore: 确保.env文件在.gitignore中，避免API密钥泄露 (priority: High)
-- [ ] add-files-to-staging: 添加所有修改的文件到Git暂存区 (**IN PROGRESS**) (priority: High)
-- [ ] commit-changes: 创建提交记录，描述新的阅读统计功能 (priority: High)
-- [ ] push-to-github: 推送代码到GitHub远程仓库 (priority: High)
+- [x] check-api-errors: 检查ArticleDetail组件中的OpenAI API调用错误 (priority: High)
+- [x] analyze-recent-changes: 分析最近添加的阅读速度统计功能是否影响了API调用 (priority: High)
+- [x] fix-rewrite-api: 修复文章重写功能的API调用问题 (priority: High)
+- [ ] fix-word-lookup-api: 检查并修复查词功能的API调用 (**IN PROGRESS**) (priority: Medium)
+- [ ] add-error-handling: 添加更好的错误处理和用户反馈机制 (priority: High)
