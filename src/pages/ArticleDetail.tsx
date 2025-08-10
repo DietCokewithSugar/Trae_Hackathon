@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Article, articleAPI, Word, wordAPI, unfamiliarWordAPI } from '../lib/supabase'
 import { rewriteArticleWithWords } from '../lib/openai'
-import { ArrowLeft, Calendar, CheckCircle, Loader2, Clock, BookOpen, Home } from 'lucide-react'
+import { ArrowLeft, Calendar, CheckCircle, Loader2, Clock, BookOpen, Home, Sparkles, TrendingUp, Target, Award, Zap, Eye } from 'lucide-react'
 import WordPopup from '../components/WordPopup'
 
 interface ArticleDetailProps {
@@ -410,18 +410,36 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   if (loading || isRewriting) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="flex items-center mb-4">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-600 mr-3" />
-            <span className="text-gray-600">
-              {loading ? '加载文章中...' : '正在为您重写文章，融入不熟悉的单词...'}
-            </span>
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="relative mb-8">
+            <div className="w-20 h-20 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
+            <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-accent-400 rounded-full animate-spin mx-auto" style={{animationDirection: 'reverse', animationDuration: '0.8s'}}></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {loading ? (
+                <BookOpen className="w-8 h-8 text-primary-600" />
+              ) : (
+                <Sparkles className="w-8 h-8 text-accent-600" />
+              )}
+            </div>
           </div>
+          
+          <h2 className="text-2xl font-bold text-neutral-800 mb-4">
+            {loading ? '加载文章中...' : 'AI 正在为您优化文章'}
+          </h2>
+          
+          <p className="text-neutral-600 max-w-md mx-auto mb-6">
+            {loading 
+              ? '正在获取文章内容，请稍候' 
+              : '我们正在根据您的不熟悉单词列表重写文章，让学习更有针对性'
+            }
+          </p>
+          
           {isRewriting && (
-            <p className="text-sm text-gray-500 text-center max-w-md">
-              我们正在根据您的不熟悉单词列表重写文章，让学习更有针对性
-            </p>
+            <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-primary-200/50">
+              <Zap className="w-4 h-4 text-accent-600 mr-2" />
+              <span className="text-sm font-medium text-neutral-700">AI 智能重写中</span>
+            </div>
           )}
         </div>
       </div>
@@ -430,13 +448,18 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 text-lg mb-4">文章未找到</p>
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="w-24 h-24 bg-gradient-to-br from-error-100 to-warning-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="w-12 h-12 text-error-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-neutral-800 mb-3">文章未找到</h2>
+          <p className="text-neutral-600 mb-8">抱歉，无法找到您要查看的文章</p>
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="btn-primary"
           >
+            <Home className="w-4 h-4 mr-2" />
             返回首页
           </button>
         </div>
@@ -461,120 +484,132 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     const speedStats = calculateReadingSpeedStats()
     
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
-          {/* 标题 */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-gray-600" />
+      <div className="min-h-screen gradient-bg flex items-center justify-center px-6">
+        <div className="max-w-3xl w-full animate-fade-in">
+          {/* 成功标题 */}
+          <div className="text-center mb-12">
+            <div className="relative mb-6">
+              <div className="w-24 h-24 bg-gradient-to-br from-success-100 to-primary-100 rounded-2xl flex items-center justify-center mx-auto shadow-soft">
+                <Award className="w-12 h-12 text-success-600" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-accent-500 rounded-full flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">阅读完成！</h2>
-            <p className="text-gray-600">恭喜您完成了《{article?.title}》的阅读</p>
+            <h1 className="text-4xl font-bold text-gradient mb-4">阅读完成！</h1>
+            <p className="text-xl text-neutral-600 max-w-md mx-auto">
+              恭喜您完成了《{article?.title}》的阅读
+            </p>
           </div>
 
-          {/* 统计信息 */}
-          <div className="space-y-6 mb-8">
+          {/* 统计卡片网格 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* 阅读时长 */}
-            <div className="flex items-center p-4 bg-gray-50 rounded-xl">
-              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
-                <Clock className="w-6 h-6 text-gray-600" />
+            <div className="card-base text-center animate-slide-up" style={{animationDelay: '0.1s'}}>
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-primary-600" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-800">阅读时长</h3>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatReadingTime(readingStartTime, readingEndTime)}
-                </p>
-              </div>
+              <h3 className="text-lg font-bold text-neutral-800 mb-2">阅读时长</h3>
+              <p className="text-3xl font-bold text-gradient mb-1">
+                {formatReadingTime(readingStartTime, readingEndTime)}
+              </p>
+              <p className="text-sm text-neutral-500">专注学习时间</p>
             </div>
 
-            {/* 新添加的单词 */}
-            <div className="flex items-start p-4 bg-gray-50 rounded-xl">
-              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4 mt-1">
-                <BookOpen className="w-6 h-6 text-gray-600" />
+            {/* 新学单词 */}
+            <div className="card-base text-center animate-slide-up" style={{animationDelay: '0.2s'}}>
+              <div className="w-16 h-16 bg-gradient-to-br from-accent-100 to-accent-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Target className="w-8 h-8 text-accent-600" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">新学单词</h3>
-                {newWordsAdded.length > 0 ? (
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900 mb-3">
-                      {newWordsAdded.length} 个
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {newWordsAdded.map((word, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium"
-                        >
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">本次阅读未添加新单词</p>
-                )}
-              </div>
+              <h3 className="text-lg font-bold text-neutral-800 mb-2">新学单词</h3>
+              <p className="text-3xl font-bold text-gradient mb-1">
+                {newWordsAdded.length}
+              </p>
+              <p className="text-sm text-neutral-500 mb-4">词汇收获</p>
+              {newWordsAdded.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {newWordsAdded.slice(0, 3).map((word, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-accent-100 text-accent-700 rounded-full text-xs font-medium"
+                    >
+                      {word}
+                    </span>
+                  ))}
+                  {newWordsAdded.length > 3 && (
+                    <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium">
+                      +{newWordsAdded.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* 阅读速度分析 */}
+            {/* 阅读速度 */}
             {speedStats && (
-              <div className="flex items-start p-4 bg-gray-50 rounded-xl">
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4 mt-1">
-                  <Clock className="w-6 h-6 text-gray-600" />
+              <div className="card-base text-center animate-slide-up" style={{animationDelay: '0.3s'}}>
+                <div className="w-16 h-16 bg-gradient-to-br from-success-100 to-success-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp className="w-8 h-8 text-success-600" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800 mb-2">阅读速度分析</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">平均阅读速度</span>
-                      <span className="text-lg font-bold text-gray-900">
-                        {Math.round(speedStats.averageSpeed)} 词/分钟
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="text-sm text-gray-600 mb-2">速度分布：</div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-red-600">● 较慢 (0-25%)</span>
-                          <span className="font-medium">{speedStats.levels.slow.length}句</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-orange-600">● 一般 (25-50%)</span>
-                          <span className="font-medium">{speedStats.levels.medium.length}句</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-blue-600">● 较快 (50-75%)</span>
-                          <span className="font-medium">{speedStats.levels.fast.length}句</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-green-600">● 很快 (75-100%)</span>
-                          <span className="font-medium">{speedStats.levels.veryFast.length}句</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {speedStats.unfamiliarSentences.length > 0 && (
-                      <div className="mt-3 p-3 bg-red-50 rounded-lg">
-                        <div className="text-sm font-medium text-red-800 mb-2">
-                          不熟悉的句子 ({speedStats.unfamiliarSentences.length}句)
-                        </div>
-                        <div className="text-xs text-red-600">
-                          这些句子的阅读速度较慢，建议重点复习
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <h3 className="text-lg font-bold text-neutral-800 mb-2">阅读速度</h3>
+                <p className="text-3xl font-bold text-gradient mb-1">
+                  {Math.round(speedStats.averageSpeed)}
+                </p>
+                <p className="text-sm text-neutral-500">词/分钟</p>
               </div>
             )}
           </div>
+          {/* 详细分析 */}
+          {speedStats && (
+            <div className="card-base mb-8 animate-slide-up" style={{animationDelay: '0.4s'}}>
+              <h3 className="text-xl font-bold text-neutral-800 mb-6 text-center">阅读表现分析</h3>
+              
+              {/* 速度分布 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-4 bg-error-50 rounded-xl border border-error-200">
+                  <div className="w-3 h-3 bg-error-500 rounded-full mx-auto mb-2"></div>
+                  <div className="text-lg font-bold text-error-700">{speedStats.levels.slow.length}</div>
+                  <div className="text-xs text-error-600">较慢句子</div>
+                </div>
+                <div className="text-center p-4 bg-warning-50 rounded-xl border border-warning-200">
+                  <div className="w-3 h-3 bg-warning-500 rounded-full mx-auto mb-2"></div>
+                  <div className="text-lg font-bold text-warning-700">{speedStats.levels.medium.length}</div>
+                  <div className="text-xs text-warning-600">一般句子</div>
+                </div>
+                <div className="text-center p-4 bg-primary-50 rounded-xl border border-primary-200">
+                  <div className="w-3 h-3 bg-primary-500 rounded-full mx-auto mb-2"></div>
+                  <div className="text-lg font-bold text-primary-700">{speedStats.levels.fast.length}</div>
+                  <div className="text-xs text-primary-600">较快句子</div>
+                </div>
+                <div className="text-center p-4 bg-success-50 rounded-xl border border-success-200">
+                  <div className="w-3 h-3 bg-success-500 rounded-full mx-auto mb-2"></div>
+                  <div className="text-lg font-bold text-success-700">{speedStats.levels.veryFast.length}</div>
+                  <div className="text-xs text-success-600">很快句子</div>
+                </div>
+              </div>
+              
+              {/* 不熟悉句子提示 */}
+              {speedStats.unfamiliarSentences.length > 0 && (
+                <div className="bg-gradient-to-r from-error-50 to-warning-50 border border-error-200 rounded-xl p-4">
+                  <div className="flex items-center mb-2">
+                    <Eye className="w-5 h-5 text-error-600 mr-2" />
+                    <span className="font-bold text-error-800">
+                      需要重点关注的句子 ({speedStats.unfamiliarSentences.length}句)
+                    </span>
+                  </div>
+                  <p className="text-sm text-error-700">
+                    这些句子的阅读速度较慢，建议重点复习和练习
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 操作按钮 */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{animationDelay: '0.5s'}}>
             <button
               onClick={onBack}
-              className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors font-medium"
+              className="btn-primary flex-1"
             >
               <Home className="w-5 h-5 mr-2" />
               返回首页
@@ -595,7 +630,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
                   wordCount: countWords(sentences[0])
                 }] : [])
               }}
-              className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+              className="btn-secondary flex-1"
             >
               <BookOpen className="w-5 h-5 mr-2" />
               重新阅读
@@ -607,27 +642,30 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen gradient-bg flex flex-col">
       {/* 顶部导航栏 */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="bg-white/80 backdrop-blur-md shadow-soft border-b border-neutral-200/50">
+        <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={onBack}
-              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+              className="flex items-center text-neutral-600 hover:text-neutral-800 transition-all duration-200 hover:bg-neutral-100 px-3 py-2 rounded-xl"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              <span>返回文章列表</span>
+              <span className="font-medium">返回文章列表</span>
             </button>
             
             {/* 进度指示器 */}
-            <div className="flex items-center space-x-3">
-              <span className="text-sm text-gray-500">
-                {visibleSentenceCount} / {sentences.length}
-              </span>
-              <div className="w-32 bg-gray-200 rounded-full h-2">
+            <div className="flex items-center space-x-4">
+              <div className="text-center">
+                <div className="text-sm font-bold text-neutral-800">
+                  {visibleSentenceCount} / {sentences.length}
+                </div>
+                <div className="text-xs text-neutral-500">句子进度</div>
+              </div>
+              <div className="w-40 bg-neutral-200 rounded-full h-3 shadow-inner">
                 <div 
-                  className="bg-gray-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-primary-500 to-accent-500 h-3 rounded-full transition-all duration-500 shadow-sm"
                   style={{ width: `${(visibleSentenceCount / sentences.length) * 100}%` }}
                 />
               </div>
@@ -636,79 +674,126 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
         </div>
       </div>
 
-      {/* 文章标题 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 text-center">
-            {article.title}
-          </h1>
-          
-          {/* 重写状态提示 */}
-          {rewrittenContent && (
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
-                <CheckCircle className="w-4 h-4 mr-2 text-gray-600" />
-                已为您融入不熟悉的单词，方括号标记的是重点学习词汇
+      {/* 文章标题区域 */}
+      <div className="bg-white/60 backdrop-blur-sm border-b border-neutral-200/50">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="text-center animate-fade-in">
+            <h1 className="text-3xl md:text-4xl font-bold text-gradient mb-6">
+              {article.title}
+            </h1>
+            
+            {/* 状态提示 */}
+            <div className="flex flex-wrap justify-center gap-3">
+              {rewrittenContent && (
+                <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-success-100 to-primary-100 border border-success-200/50 rounded-full">
+                  <Sparkles className="w-4 h-4 mr-2 text-success-600" />
+                  <span className="text-sm font-medium text-success-700">
+                    AI 已为您融入不熟悉单词
+                  </span>
+                </div>
+              )}
+              
+              {rewriteError && (
+                <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-warning-100 to-error-100 border border-warning-200/50 rounded-full">
+                  <span className="text-sm font-medium text-warning-700">
+                    ⚠️ 重写失败，显示原文章
+                  </span>
+                </div>
+              )}
+              
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-100 to-accent-100 border border-primary-200/50 rounded-full">
+                <Eye className="w-4 h-4 mr-2 text-primary-600" />
+                <span className="text-sm font-medium text-primary-700">
+                  点击单词查看释义
+                </span>
               </div>
             </div>
-          )}
-          
-          {/* 重写错误提示 */}
-          {rewriteError && (
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-700">
-                ⚠️ 文章重写失败：{rewriteError}，显示原文章
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
       {/* 主要阅读区域 */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="max-w-4xl w-full">
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="max-w-5xl w-full">
           {/* 文章内容显示区域 */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8 border border-gray-200">
-            <div className="space-y-6">
+          <div className="card-base p-8 md:p-16 mb-12 animate-fade-in">
+            <div className="space-y-8">
               {visibleSentences.map((sentence, index) => {
                 const isSlowSentence = slowSentenceIndices.has(index)
                 return (
-                  <p 
+                  <div 
                     key={index} 
-                    className={`text-xl md:text-2xl leading-relaxed font-medium transition-all duration-300 ${
+                    className={`animate-slide-up transition-all duration-500 ${
                       isSlowSentence 
-                        ? 'text-red-800 bg-red-50 p-4 rounded-lg border-l-4 border-red-300' 
-                        : 'text-gray-800'
+                        ? 'bg-gradient-to-r from-error-50 to-warning-50 p-6 rounded-2xl border-l-4 border-error-400 shadow-soft' 
+                        : ''
                     }`}
+                    style={{animationDelay: `${index * 0.2}s`}}
                   >
-                    {renderTextWithWordHighlight(sentence)}
-                  </p>
+                    <p className={`text-xl md:text-2xl lg:text-3xl leading-relaxed font-medium ${
+                      isSlowSentence 
+                        ? 'text-error-800' 
+                        : 'text-neutral-800'
+                    }`}>
+                      {renderTextWithWordHighlight(sentence)}
+                    </p>
+                    {isSlowSentence && (
+                      <div className="mt-4 flex items-center text-sm text-error-600">
+                        <Eye className="w-4 h-4 mr-2" />
+                        <span>这句话阅读速度较慢，建议重点关注</span>
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>
           </div>
 
-          {/* 提示信息和完成按钮 */}
-          <div className="flex flex-col items-center space-y-4">
+          {/* 控制区域 */}
+          <div className="flex flex-col items-center space-y-6 animate-fade-in">
             {!isAllSentencesVisible && (
               <div className="text-center">
-                <p className="text-gray-500 text-lg mb-2">按空格键继续阅读</p>
-                <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-lg">
-                  <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-sm font-mono">Space</kbd>
-                  <span className="ml-2 text-sm text-gray-600">显示下一句</span>
+                <p className="text-neutral-600 text-xl mb-4">按空格键继续阅读下一句</p>
+                <div className="inline-flex items-center px-6 py-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-neutral-200/50">
+                  <kbd className="px-4 py-2 bg-gradient-to-br from-neutral-100 to-neutral-200 border border-neutral-300 rounded-xl text-lg font-mono font-bold text-neutral-700 shadow-inner">
+                    Space
+                  </kbd>
+                  <span className="ml-4 text-neutral-700 font-medium">显示下一句</span>
+                </div>
+                
+                {/* 阅读提示 */}
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <div className="inline-flex items-center px-3 py-2 bg-primary-100 text-primary-700 rounded-full text-sm">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    <span>方括号单词是重点词汇</span>
+                  </div>
+                  <div className="inline-flex items-center px-3 py-2 bg-accent-100 text-accent-700 rounded-full text-sm">
+                    <Target className="w-4 h-4 mr-2" />
+                    <span>点击任意单词查看释义</span>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* 完成阅读按钮 */}
             {isAllSentencesVisible && (
-              <button
-                onClick={finishReading}
-                className="flex items-center px-8 py-3 bg-gray-800 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-gray-700 transition-all duration-200 font-medium"
-              >
-                <CheckCircle className="w-5 h-5 mr-2" />
-                完成阅读
-              </button>
+              <div className="text-center animate-scale-in">
+                <div className="mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-br from-success-100 to-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-success-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-neutral-800 mb-2">文章阅读完成！</h3>
+                  <p className="text-neutral-600">点击下方按钮查看您的阅读统计</p>
+                </div>
+                
+                <button
+                  onClick={finishReading}
+                  className="btn-primary px-12 py-4 text-lg shadow-medium hover:shadow-large transform hover:scale-105"
+                >
+                  <Award className="w-6 h-6 mr-3" />
+                  查看阅读统计
+                </button>
+              </div>
             )}
           </div>
         </div>

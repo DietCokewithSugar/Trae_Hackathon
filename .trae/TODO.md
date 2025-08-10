@@ -1,7 +1,6 @@
 # TODO:
 
-- [x] check-api-errors: 检查ArticleDetail组件中的OpenAI API调用错误 (priority: High)
-- [x] analyze-recent-changes: 分析最近添加的阅读速度统计功能是否影响了API调用 (priority: High)
-- [x] fix-rewrite-api: 修复文章重写功能的API调用问题 (priority: High)
-- [ ] fix-word-lookup-api: 检查并修复查词功能的API调用 (**IN PROGRESS**) (priority: Medium)
-- [ ] add-error-handling: 添加更好的错误处理和用户反馈机制 (priority: High)
+- [x] verify-env-excluded: 确保.env文件中的API密钥不会被提交 (priority: High)
+- [ ] git-add-changes: 添加所有修改的文件到Git暂存区 (**IN PROGRESS**) (priority: High)
+- [ ] git-commit-ui-changes: 创建提交记录，描述优化后的WordPopup单词卡片UI设计 (priority: High)
+- [ ] git-push-to-github: 推送代码到GitHub远程仓库 (priority: High)
