@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Article, articleAPI, Word, wordAPI, unfamiliarWordAPI } from '../lib/supabase'
 import { rewriteArticleWithWords } from '../lib/openai'
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Calendar, CheckCircle, Loader2 } from 'lucide-react'
 import WordPopup from '../components/WordPopup'
 
 interface ArticleDetailProps {
@@ -13,7 +13,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [sentences, setSentences] = useState<string[]>([])
-  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
+  const [visibleSentenceCount, setVisibleSentenceCount] = useState(1)
   const [hoveredWord, setHoveredWord] = useState<string | null>(null)
   const [selectedWord, setSelectedWord] = useState<Word | null>(null)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
@@ -26,6 +26,23 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   useEffect(() => {
     loadArticle()
   }, [articleId])
+
+  // 添加键盘事件监听
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.code === 'Space') {
+        event.preventDefault()
+        if (visibleSentenceCount < sentences.length) {
+          setVisibleSentenceCount(prev => prev + 1)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [visibleSentenceCount, sentences.length])
 
   const loadArticle = async () => {
     try {
@@ -65,7 +82,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
         // 将文章内容按句子分割
         const sentenceArray = splitIntoSentences(contentToUse)
         setSentences(sentenceArray)
-        setCurrentSentenceIndex(0)
+        setVisibleSentenceCount(1)
       }
     } catch (error) {
       console.error('Failed to load article:', error)
@@ -94,20 +111,6 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     })
     
     return sentences.filter(s => s.length > 0)
-  }
-
-  // 导航到上一句
-  const goToPreviousSentence = () => {
-    if (currentSentenceIndex > 0) {
-      setCurrentSentenceIndex(currentSentenceIndex - 1)
-    }
-  }
-
-  // 导航到下一句
-  const goToNextSentence = () => {
-    if (currentSentenceIndex < sentences.length - 1) {
-      setCurrentSentenceIndex(currentSentenceIndex + 1)
-    }
   }
 
   // 完成阅读
@@ -279,9 +282,8 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     )
   }
 
-  const currentSentence = sentences[currentSentenceIndex] || ''
-  const isFirstSentence = currentSentenceIndex === 0
-  const isLastSentence = currentSentenceIndex === sentences.length - 1
+  const visibleSentences = sentences.slice(0, visibleSentenceCount)
+  const isAllSentencesVisible = visibleSentenceCount >= sentences.length
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -300,12 +302,12 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             {/* 进度指示器 */}
             <div className="flex items-center space-x-3">
               <span className="text-sm text-gray-500">
-                {currentSentenceIndex + 1} / {sentences.length}
+                {visibleSentenceCount} / {sentences.length}
               </span>
               <div className="w-32 bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-gray-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentSentenceIndex + 1) / sentences.length) * 100}%` }}
+                  style={{ width: `${(visibleSentenceCount / sentences.length) * 100}%` }}
                 />
               </div>
             </div>
@@ -344,41 +346,31 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
       {/* 主要阅读区域 */}
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="max-w-4xl w-full">
-          {/* 当前句子显示区域 */}
+          {/* 文章内容显示区域 */}
           <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8 border border-gray-200">
-            <div className="text-center">
-              <p className="text-xl md:text-2xl leading-relaxed text-gray-800 font-medium">
-                {renderTextWithWordHighlight(currentSentence)}
-              </p>
+            <div className="space-y-6">
+              {visibleSentences.map((sentence, index) => (
+                <p key={index} className="text-xl md:text-2xl leading-relaxed text-gray-800 font-medium">
+                  {renderTextWithWordHighlight(sentence)}
+                </p>
+              ))}
             </div>
           </div>
 
-          {/* 导航按钮区域 */}
-          <div className="flex justify-center items-center space-x-6">
-            {/* 上一句按钮 */}
-            {!isFirstSentence && (
-              <button
-                onClick={goToPreviousSentence}
-                className="flex items-center px-6 py-3 bg-white text-gray-700 rounded-xl shadow-md hover:shadow-lg hover:bg-gray-50 transition-all duration-200 font-medium border border-gray-200"
-              >
-                <ChevronLeft className="w-5 h-5 mr-2" />
-                上一句
-              </button>
-            )}
-
-            {/* 下一句按钮 */}
-            {!isLastSentence && (
-              <button
-                onClick={goToNextSentence}
-                className="flex items-center px-6 py-3 bg-gray-800 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-gray-700 transition-all duration-200 font-medium"
-              >
-                下一句
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </button>
+          {/* 提示信息和完成按钮 */}
+          <div className="flex flex-col items-center space-y-4">
+            {!isAllSentencesVisible && (
+              <div className="text-center">
+                <p className="text-gray-500 text-lg mb-2">按空格键继续阅读</p>
+                <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-lg">
+                  <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-sm font-mono">Space</kbd>
+                  <span className="ml-2 text-sm text-gray-600">显示下一句</span>
+                </div>
+              </div>
             )}
 
             {/* 完成阅读按钮 */}
-            {isLastSentence && (
+            {isAllSentencesVisible && (
               <button
                 onClick={finishReading}
                 className="flex items-center px-8 py-3 bg-gray-800 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-gray-700 transition-all duration-200 font-medium"
