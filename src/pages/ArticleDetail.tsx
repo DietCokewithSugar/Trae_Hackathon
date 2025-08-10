@@ -107,12 +107,38 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   // 将文本按单词分割并渲染为可悬停和点击的元素
   const renderTextWithWordHighlight = (text: string) => {
-    // 使用正则表达式分割文本，保留标点符号和空格
-    const tokens = text.split(/(\s+|[.,!?;:"'()\[\]{}])/)
+    // 使用正则表达式分割文本，保留标点符号、空格和方括号
+    const tokens = text.split(/(\s+|[.,!?;:"'(){}]|\[[^\]]+\])/)
     
     return tokens.map((token, index) => {
-      // 检查是否为单词（包含字母）
-      const isWord = /[a-zA-Z]/.test(token)
+      // 检查是否为方括号包围的单词（重写文章中的目标单词）
+      const isBracketedWord = /^\[[^\]]+\]$/.test(token)
+      
+      if (isBracketedWord) {
+        // 提取方括号内的单词
+        const word = token.slice(1, -1)
+        return (
+          <span
+            key={index}
+            className={`inline-block cursor-pointer transition-all duration-200 rounded px-2 py-1 mx-1 ${
+              hoveredWord === word.toLowerCase() 
+                ? 'bg-orange-300 text-orange-900 shadow-md transform scale-110 font-bold' 
+                : 'bg-orange-200 text-orange-800 hover:bg-orange-300 font-semibold'
+            } ${loadingWord ? 'pointer-events-none' : ''} border-2 border-orange-400`}
+            onMouseEnter={() => setHoveredWord(word.toLowerCase())}
+            onMouseLeave={() => setHoveredWord(null)}
+            onTouchStart={() => setHoveredWord(word.toLowerCase())}
+            onTouchEnd={() => setTimeout(() => setHoveredWord(null), 1000)}
+            onClick={(e) => handleWordClick(word, e)}
+            title="这是为您特别融入的不熟悉单词"
+          >
+            {word}
+          </span>
+        )
+      }
+      
+      // 检查是否为普通单词（包含字母）
+      const isWord = /[a-zA-Z]/.test(token) && !token.includes('[')
       
       if (isWord) {
         return (

@@ -69,6 +69,33 @@ export const articleAPI = {
     }
     
     return data || []
+  },
+
+  // 保存重写后的文章
+  async saveRewrittenArticle(title: string, content: string): Promise<Article | null> {
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .insert([
+          {
+            title: `[重写] ${title}`,
+            content: content
+          }
+        ])
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('Error saving rewritten article:', error)
+        return null
+      }
+      
+      console.log('Successfully saved rewritten article:', data)
+      return data
+    } catch (err) {
+      console.error('Unexpected error saving rewritten article:', err)
+      return null
+    }
   }
 }
 
