@@ -7,9 +7,10 @@ interface WordPopupProps {
   position: { x: number; y: number }
   isVisible: boolean
   onClose: () => void
+  onAddToUnfamiliar?: (word: string) => void
 }
 
-const WordPopup: React.FC<WordPopupProps> = ({ word, position, isVisible, onClose }) => {
+const WordPopup: React.FC<WordPopupProps> = ({ word, position, isVisible, onClose, onAddToUnfamiliar }) => {
   const [adjustedPosition, setAdjustedPosition] = useState(position)
   const [isAddingToUnfamiliar, setIsAddingToUnfamiliar] = useState(false)
 
@@ -29,6 +30,8 @@ const WordPopup: React.FC<WordPopupProps> = ({ word, position, isVisible, onClos
       if (success) {
         // 可以添加一个成功提示
         console.log('Successfully added to unfamiliar words:', word.word)
+        // 通知父组件新添加了单词
+        onAddToUnfamiliar?.(word.word)
         // 可选：显示成功消息或关闭弹窗
         setTimeout(() => {
           onClose()

@@ -98,7 +98,6 @@ export default function Home({ onArticleClick }: HomeProps) {
         {/* 页面标题和导航 */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            英语学习文章
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
             通过阅读精选的英语文章，提升您的英语阅读能力和语言水平

@@ -14,7 +14,7 @@ export default function Navbar({ onLogoClick }: NavbarProps) {
             onClick={onLogoClick}
           >
             <BookOpen className="w-8 h-8 mr-3 text-gray-600" />
-            <h1 className="text-xl font-semibold text-gray-800">英语学习网站</h1>
+            <h1 className="text-xl font-semibold text-gray-800">PassExam</h1>
           </div>
           
           <div className="hidden md:block">

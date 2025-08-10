@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Article, articleAPI, Word, wordAPI, unfamiliarWordAPI } from '../lib/supabase'
 import { rewriteArticleWithWords } from '../lib/openai'
-import { ArrowLeft, Calendar, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Calendar, CheckCircle, Loader2, Clock, BookOpen, Home } from 'lucide-react'
 import WordPopup from '../components/WordPopup'
 
 interface ArticleDetailProps {
@@ -22,9 +22,17 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const [rewrittenContent, setRewrittenContent] = useState<string>('')
   const [isRewriting, setIsRewriting] = useState(false)
   const [rewriteError, setRewriteError] = useState<string | null>(null)
+  
+  // 阅读统计相关状态
+  const [readingStartTime, setReadingStartTime] = useState<Date | null>(null)
+  const [readingEndTime, setReadingEndTime] = useState<Date | null>(null)
+  const [newWordsAdded, setNewWordsAdded] = useState<string[]>([])
+  const [showStatistics, setShowStatistics] = useState(false)
 
   useEffect(() => {
     loadArticle()
+    // 记录阅读开始时间
+    setReadingStartTime(new Date())
   }, [articleId])
 
   // 添加键盘事件监听
@@ -115,8 +123,30 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   // 完成阅读
   const finishReading = () => {
-    // 可以在这里添加完成阅读的逻辑，比如记录阅读进度
-    onBack()
+    // 记录阅读结束时间
+    setReadingEndTime(new Date())
+    // 显示统计信息
+    setShowStatistics(true)
+  }
+
+  // 处理添加新单词到生词本
+  const handleAddToUnfamiliar = (word: string) => {
+    if (!newWordsAdded.includes(word)) {
+      setNewWordsAdded(prev => [...prev, word])
+    }
+  }
+
+  // 格式化阅读时长
+  const formatReadingTime = (startTime: Date, endTime: Date) => {
+    const diffMs = endTime.getTime() - startTime.getTime()
+    const diffMinutes = Math.floor(diffMs / 60000)
+    const diffSeconds = Math.floor((diffMs % 60000) / 1000)
+    
+    if (diffMinutes > 0) {
+      return `${diffMinutes}分${diffSeconds}秒`
+    } else {
+      return `${diffSeconds}秒`
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -285,6 +315,93 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const visibleSentences = sentences.slice(0, visibleSentenceCount)
   const isAllSentencesVisible = visibleSentenceCount >= sentences.length
 
+  // 如果显示统计信息，渲染统计界面
+  if (showStatistics && readingStartTime && readingEndTime) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+          {/* 标题 */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-gray-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">阅读完成！</h2>
+            <p className="text-gray-600">恭喜您完成了《{article?.title}》的阅读</p>
+          </div>
+
+          {/* 统计信息 */}
+          <div className="space-y-6 mb-8">
+            {/* 阅读时长 */}
+            <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                <Clock className="w-6 h-6 text-gray-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">阅读时长</h3>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatReadingTime(readingStartTime, readingEndTime)}
+                </p>
+              </div>
+            </div>
+
+            {/* 新添加的单词 */}
+            <div className="flex items-start p-4 bg-gray-50 rounded-xl">
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4 mt-1">
+                <BookOpen className="w-6 h-6 text-gray-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 mb-2">新学单词</h3>
+                {newWordsAdded.length > 0 ? (
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900 mb-3">
+                      {newWordsAdded.length} 个
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {newWordsAdded.map((word, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium"
+                        >
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">本次阅读未添加新单词</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={onBack}
+              className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors font-medium"
+            >
+              <Home className="w-5 h-5 mr-2" />
+              返回首页
+            </button>
+            <button
+              onClick={() => {
+                setShowStatistics(false)
+                setReadingStartTime(new Date())
+                setReadingEndTime(null)
+                setNewWordsAdded([])
+                setVisibleSentenceCount(1)
+              }}
+              className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+            >
+              <BookOpen className="w-5 h-5 mr-2" />
+              重新阅读
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 顶部导航栏 */}
@@ -389,6 +506,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
         position={popupPosition}
         isVisible={isPopupVisible}
         onClose={closePopup}
+        onAddToUnfamiliar={handleAddToUnfamiliar}
       />
     </div>
   )
