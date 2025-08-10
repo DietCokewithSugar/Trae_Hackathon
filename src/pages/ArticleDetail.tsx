@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Article, articleAPI, Word, wordAPI } from '../lib/supabase'
+import { Article, articleAPI, Word, wordAPI, unfamiliarWordAPI } from '../lib/supabase'
+import { rewriteArticleWithWords } from '../lib/openai'
 import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, CheckCircle, Loader2 } from 'lucide-react'
 import WordPopup from '../components/WordPopup'
 
@@ -18,6 +19,9 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 })
   const [isPopupVisible, setIsPopupVisible] = useState(false)
   const [loadingWord, setLoadingWord] = useState(false)
+  const [rewrittenContent, setRewrittenContent] = useState<string>('')
+  const [isRewriting, setIsRewriting] = useState(false)
+  const [rewriteError, setRewriteError] = useState<string | null>(null)
 
   useEffect(() => {
     loadArticle()
@@ -26,19 +30,49 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const loadArticle = async () => {
     try {
       setLoading(true)
+      setRewriteError(null)
       const data = await articleAPI.getArticleById(articleId)
       setArticle(data)
       
-      // 将文章内容按句子分割
       if (data?.content) {
-        const sentenceArray = splitIntoSentences(data.content)
+        // 获取用户不熟悉的单词列表
+        const unfamiliarWords = await unfamiliarWordAPI.getUnfamiliarWords()
+        const unfamiliarWordTexts = unfamiliarWords.map(word => word.word)
+        
+        let contentToUse = data.content
+        
+        // 如果有不熟悉的单词，调用ChatGPT重写文章
+        if (unfamiliarWordTexts.length > 0) {
+          setIsRewriting(true)
+          console.log('开始重写文章，不熟悉单词:', unfamiliarWordTexts)
+          
+          const rewriteResult = await rewriteArticleWithWords(data.content, unfamiliarWordTexts)
+          
+          if (rewriteResult.success && rewriteResult.rewrittenArticle) {
+            contentToUse = rewriteResult.rewrittenArticle
+            setRewrittenContent(contentToUse)
+            console.log('文章重写成功')
+          } else {
+            console.error('文章重写失败:', rewriteResult.error)
+            setRewriteError(rewriteResult.error || '文章重写失败')
+            // 如果重写失败，使用原文章
+            contentToUse = data.content
+          }
+          
+          setIsRewriting(false)
+        }
+        
+        // 将文章内容按句子分割
+        const sentenceArray = splitIntoSentences(contentToUse)
         setSentences(sentenceArray)
         setCurrentSentenceIndex(0)
       }
     } catch (error) {
       console.error('Failed to load article:', error)
+      setRewriteError('加载文章失败')
     } finally {
       setLoading(false)
+      setIsRewriting(false)
     }
   }
 
@@ -166,9 +200,9 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             key={index}
             className={`inline-block cursor-pointer transition-all duration-200 rounded px-2 py-1 mx-1 ${
               hoveredWord === word.toLowerCase() 
-                ? 'bg-orange-300 text-orange-900 shadow-md transform scale-110 font-bold' 
-                : 'bg-orange-200 text-orange-800 hover:bg-orange-300 font-semibold'
-            } ${loadingWord ? 'pointer-events-none' : ''} border-2 border-orange-400`}
+                ? 'bg-gray-400 text-gray-900 shadow-md transform scale-110 font-bold' 
+                : 'bg-gray-300 text-gray-800 hover:bg-gray-400 font-semibold'
+            } ${loadingWord ? 'pointer-events-none' : ''} border-2 border-gray-500`}
             onMouseEnter={() => setHoveredWord(word.toLowerCase())}
             onMouseLeave={() => setHoveredWord(null)}
             onTouchStart={() => setHoveredWord(word.toLowerCase())}
@@ -190,8 +224,8 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             key={index}
             className={`inline-block cursor-pointer transition-all duration-200 rounded px-1 ${
               hoveredWord === token.toLowerCase() 
-                ? 'bg-yellow-200 text-yellow-900 shadow-sm transform scale-105' 
-                : 'hover:bg-yellow-100'
+                ? 'bg-gray-200 text-gray-900 shadow-sm transform scale-105' 
+                : 'hover:bg-gray-100'
             } ${loadingWord ? 'pointer-events-none' : ''}`}
             onMouseEnter={() => setHoveredWord(token.toLowerCase())}
             onMouseLeave={() => setHoveredWord(null)}
@@ -209,12 +243,21 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
     })
   }
 
-  if (loading) {
+  if (loading || isRewriting) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex items-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mr-3" />
-          <span className="text-slate-600">加载中...</span>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="flex items-center mb-4">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-600 mr-3" />
+            <span className="text-gray-600">
+              {loading ? '加载文章中...' : '正在为您重写文章，融入不熟悉的单词...'}
+            </span>
+          </div>
+          {isRewriting && (
+            <p className="text-sm text-gray-500 text-center max-w-md">
+              我们正在根据您的不熟悉单词列表重写文章，让学习更有针对性
+            </p>
+          )}
         </div>
       </div>
     )
@@ -222,12 +265,12 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
   if (!article) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-500 text-lg mb-4">文章未找到</p>
+          <p className="text-gray-500 text-lg mb-4">文章未找到</p>
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
           >
             返回首页
           </button>
@@ -241,14 +284,14 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
   const isLastSentence = currentSentenceIndex === sentences.length - 1
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 顶部导航栏 */}
-      <div className="bg-white shadow-sm border-b border-slate-200">
+      <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={onBack}
-              className="flex items-center text-slate-600 hover:text-slate-800 transition-colors"
+              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               <span>返回文章列表</span>
@@ -256,12 +299,12 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             
             {/* 进度指示器 */}
             <div className="flex items-center space-x-3">
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-gray-500">
                 {currentSentenceIndex + 1} / {sentences.length}
               </span>
-              <div className="w-32 bg-slate-200 rounded-full h-2">
+              <div className="w-32 bg-gray-200 rounded-full h-2">
                 <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-gray-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${((currentSentenceIndex + 1) / sentences.length) * 100}%` }}
                 />
               </div>
@@ -271,11 +314,30 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
       </div>
 
       {/* 文章标题 */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 text-center">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 text-center">
             {article.title}
           </h1>
+          
+          {/* 重写状态提示 */}
+          {rewrittenContent && (
+            <div className="mt-4 text-center">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
+                <CheckCircle className="w-4 h-4 mr-2 text-gray-600" />
+                已为您融入不熟悉的单词，方括号标记的是重点学习词汇
+              </div>
+            </div>
+          )}
+          
+          {/* 重写错误提示 */}
+          {rewriteError && (
+            <div className="mt-4 text-center">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-700">
+                ⚠️ 文章重写失败：{rewriteError}，显示原文章
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -283,9 +345,9 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="max-w-4xl w-full">
           {/* 当前句子显示区域 */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8">
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8 border border-gray-200">
             <div className="text-center">
-              <p className="text-xl md:text-2xl leading-relaxed text-slate-800 font-medium">
+              <p className="text-xl md:text-2xl leading-relaxed text-gray-800 font-medium">
                 {renderTextWithWordHighlight(currentSentence)}
               </p>
             </div>
@@ -297,7 +359,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             {!isFirstSentence && (
               <button
                 onClick={goToPreviousSentence}
-                className="flex items-center px-6 py-3 bg-white text-slate-700 rounded-xl shadow-md hover:shadow-lg hover:bg-slate-50 transition-all duration-200 font-medium"
+                className="flex items-center px-6 py-3 bg-white text-gray-700 rounded-xl shadow-md hover:shadow-lg hover:bg-gray-50 transition-all duration-200 font-medium border border-gray-200"
               >
                 <ChevronLeft className="w-5 h-5 mr-2" />
                 上一句
@@ -308,7 +370,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             {!isLastSentence && (
               <button
                 onClick={goToNextSentence}
-                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-200 font-medium"
+                className="flex items-center px-6 py-3 bg-gray-800 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-gray-700 transition-all duration-200 font-medium"
               >
                 下一句
                 <ChevronRight className="w-5 h-5 ml-2" />
@@ -319,7 +381,7 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
             {isLastSentence && (
               <button
                 onClick={finishReading}
-                className="flex items-center px-8 py-3 bg-green-600 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-green-700 transition-all duration-200 font-medium"
+                className="flex items-center px-8 py-3 bg-gray-800 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-gray-700 transition-all duration-200 font-medium"
               >
                 <CheckCircle className="w-5 h-5 mr-2" />
                 完成阅读

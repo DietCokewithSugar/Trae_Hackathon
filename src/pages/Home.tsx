@@ -86,7 +86,7 @@ export default function Home({ onArticleClick }: HomeProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       <Navbar onLogoClick={handleLogoClick} />
       
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -97,10 +97,10 @@ export default function Home({ onArticleClick }: HomeProps) {
 
         {/* 页面标题和导航 */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
             英语学习文章
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-6">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
             通过阅读精选的英语文章，提升您的英语阅读能力和语言水平
           </p>
           
@@ -108,10 +108,10 @@ export default function Home({ onArticleClick }: HomeProps) {
           <div className="flex justify-center gap-4 mb-8">
             <button
               onClick={() => setShowUnfamiliarWords(false)}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-6 py-3 rounded-lg font-medium transition-colors border ${
                 !showUnfamiliarWords 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-gray-800 text-white border-gray-800' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
               }`}
             >
               <BookOpen className="inline-block w-4 h-4 mr-2" />
@@ -119,10 +119,10 @@ export default function Home({ onArticleClick }: HomeProps) {
             </button>
             <button
               onClick={() => setShowUnfamiliarWords(true)}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-6 py-3 rounded-lg font-medium transition-colors border ${
                 showUnfamiliarWords 
-                  ? 'bg-orange-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-gray-800 text-white border-gray-800' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
               }`}
             >
               <BookOpen className="inline-block w-4 h-4 mr-2" />
@@ -137,8 +137,8 @@ export default function Home({ onArticleClick }: HomeProps) {
           <div>
             {unfamiliarLoading ? (
               <div className="flex justify-center items-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-                <span className="ml-2 text-slate-600">加载中...</span>
+                <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
+                <span className="ml-2 text-gray-600">加载中...</span>
               </div>
             ) : unfamiliarWords.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -150,7 +150,7 @@ export default function Home({ onArticleClick }: HomeProps) {
                       </h3>
                       <button
                         onClick={() => handleRemoveUnfamiliarWord(word.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
                         title="删除"
                       >
                         <Trash2 size={16} />
@@ -181,8 +181,8 @@ export default function Home({ onArticleClick }: HomeProps) {
             ) : (
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-slate-500 text-lg mb-2">还没有不熟悉的单词</p>
-                <p className="text-slate-400 text-sm">
+                <p className="text-gray-500 text-lg mb-2">还没有不熟悉的单词</p>
+                <p className="text-gray-400 text-sm">
                   在阅读文章时点击单词，然后选择"不熟悉"来添加到这里
                 </p>
               </div>
@@ -192,15 +192,15 @@ export default function Home({ onArticleClick }: HomeProps) {
           /* 文章列表 */
           loading ? (
             <div className="flex justify-center items-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-2 text-slate-600">加载中...</span>
+              <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
+              <span className="ml-2 text-gray-600">加载中...</span>
             </div>
           ) : (
             <>
               {/* 搜索结果提示 */}
               {searchQuery && (
                 <div className="mb-6">
-                  <p className="text-slate-600">
+                  <p className="text-gray-600">
                     搜索 "{searchQuery}" 找到 {filteredArticles.length} 篇文章
                   </p>
                 </div>
@@ -219,13 +219,13 @@ export default function Home({ onArticleClick }: HomeProps) {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-slate-500 text-lg">
+                  <p className="text-gray-500 text-lg">
                     {searchQuery ? '没有找到相关文章' : '暂无文章'}
                   </p>
                   {searchQuery && (
                     <button
                       onClick={() => handleSearch('')}
-                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
                     >
                       清除搜索
                     </button>

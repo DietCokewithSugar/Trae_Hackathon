@@ -16,8 +16,11 @@ export interface Article {
   updated_at: string
 }
 
-// 导入CSV单词解析器
-import { csvWordAPI, Word } from './csvWordParser'
+// 导入OpenAI查词功能
+import { lookupWordWithChatGPT } from './openai'
+
+// 导入CSV单词解析器（保留作为备用）
+import { Word } from './csvWordParser'
 
 // 重新导出Word类型
 export type { Word }
@@ -72,31 +75,31 @@ export const articleAPI = {
   },
 
   // 保存重写后的文章
-  async saveRewrittenArticle(title: string, content: string): Promise<Article | null> {
-    try {
-      const { data, error } = await supabase
-        .from('articles')
-        .insert([
-          {
-            title: `[重写] ${title}`,
-            content: content
-          }
-        ])
-        .select()
-        .single()
+//   async saveRewrittenArticle(title: string, content: string): Promise<Article | null> {
+//     try {
+//       const { data, error } = await supabase
+//         .from('articles')
+//         .insert([
+//           {
+//             title: `[重写] ${title}`,
+//             content: content
+//           }
+//         ])
+//         .select()
+//         .single()
       
-      if (error) {
-        console.error('Error saving rewritten article:', error)
-        return null
-      }
+//       if (error) {
+//         console.error('Error saving rewritten article:', error)
+//         return null
+//       }
       
-      console.log('Successfully saved rewritten article:', data)
-      return data
-    } catch (err) {
-      console.error('Unexpected error saving rewritten article:', err)
-      return null
-    }
-  }
+//       console.log('Successfully saved rewritten article:', data)
+//       return data
+//     } catch (err) {
+//       console.error('Unexpected error saving rewritten article:', err)
+//       return null
+//     }
+//   }
 }
 
 // 不熟悉单词类型定义
@@ -109,11 +112,37 @@ export interface UnfamiliarWord {
   created_at: string
 }
 
-// 单词API函数 - 现在使用本地CSV文件
+// 单词API函数 - 现在使用ChatGPT API
 export const wordAPI = {
   // 根据单词查询释义
   async getWordByText(word: string): Promise<Word | null> {
-    return await csvWordAPI.getWordByText(word)
+    try {
+      console.log('=== 开始查询单词 ===', word)
+      
+      // 调用ChatGPT API查询单词
+      const result = await lookupWordWithChatGPT(word)
+      
+      if (result.success && result.wordData) {
+        console.log('=== ChatGPT查词成功 ===', result.wordData)
+        
+        // 转换为Word接口格式
+        const wordResult: Word = {
+          id: result.wordData.id,
+          word: result.wordData.word,
+          phonetic: result.wordData.phonetic,
+          definition: result.wordData.definition,
+          translation: result.wordData.translation
+        }
+        
+        return wordResult
+      } else {
+        console.error('=== ChatGPT查词失败 ===', result.error)
+        return null
+      }
+    } catch (error) {
+      console.error('=== 查词过程中发生错误 ===', error)
+      return null
+    }
   }
 }
 

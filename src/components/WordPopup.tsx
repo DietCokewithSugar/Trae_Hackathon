@@ -158,7 +158,7 @@ const WordPopup: React.FC<WordPopupProps> = ({ word, position, isVisible, onClos
           <button
             onClick={handleAddToUnfamiliar}
             disabled={isAddingToUnfamiliar}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-800 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <BookmarkPlus size={16} />
             {isAddingToUnfamiliar ? '添加中...' : '不熟悉'}
